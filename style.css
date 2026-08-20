@@ -1,0 +1,404 @@
+/* World Book Quick Switch (世界书快捷开关) */
+
+.wbqs-panel {
+    --wbqs-on: var(--SmartThemeQuoteColor, #6ec06e);
+    --wbqs-border: var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.2));
+
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    /* The popup mount centers its content; the list must stay left-aligned. */
+    text-align: left;
+    margin-bottom: 8px;
+    padding: 8px;
+    border: 1px solid var(--wbqs-border);
+    border-radius: 8px;
+    background-color: var(--black30a, rgba(0, 0, 0, 0.3));
+    box-sizing: border-box;
+}
+
+.wbqs-panel.wbqs-standalone {
+    margin-bottom: 0;
+    border: none;
+    background-color: transparent;
+}
+
+.wbqs-hidden-native {
+    display: none !important;
+}
+
+/* Header */
+
+.wbqs-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wbqs-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.wbqs-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+    margin-left: auto;
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+.wbqs-stat-active {
+    color: var(--wbqs-on);
+    font-weight: bold;
+    font-size: 1.15em;
+}
+
+.wbqs-stat.wbqs-stat-none .wbqs-stat-active {
+    color: var(--SmartThemeBodyColor);
+    opacity: 0.5;
+}
+
+.wbqs-stat-sep,
+.wbqs-stat-total,
+.wbqs-stat-label {
+    opacity: 0.65;
+}
+
+.wbqs-header-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.wbqs-icon-btn {
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+}
+
+.wbqs-icon-btn:hover {
+    opacity: 1;
+}
+
+/* Toolbar */
+
+.wbqs-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.wbqs-toolbar,
+.wbqs-options,
+.wbqs-bulk,
+.wbqs-selbar,
+.wbqs-presets {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.wbqs-toolbar .wbqs-search {
+    flex: 1 1 140px;
+    min-width: 100px;
+    margin: 0;
+}
+
+.wbqs-toolbar .wbqs-sort {
+    flex: 0 1 auto;
+    width: auto;
+    margin: 0;
+}
+
+.wbqs-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 7px;
+    border: 1px solid var(--wbqs-border);
+    border-radius: 6px;
+    font-size: 0.85em;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.wbqs-chip input {
+    margin: 0;
+    cursor: pointer;
+}
+
+.wbqs-bulk .menu_button,
+.wbqs-selbar .menu_button,
+.wbqs-toolbar .menu_button {
+    margin: 0;
+    font-size: 0.8em;
+    white-space: nowrap;
+}
+
+.wbqs-selbar {
+    padding: 4px 6px;
+    border: 1px dashed var(--wbqs-on);
+    border-radius: 6px;
+}
+
+.wbqs-select-mode-btn.wbqs-active {
+    color: var(--wbqs-on);
+    border-color: var(--wbqs-on);
+}
+
+/* Binding banner */
+
+.wbqs-binding {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background-color: color-mix(in srgb, var(--wbqs-on) 14%, transparent);
+    font-size: 0.85em;
+}
+
+.wbqs-binding span {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wbqs-binding-clear {
+    flex: 0 0 auto;
+    cursor: pointer;
+    opacity: 0.6;
+}
+
+.wbqs-binding-clear:hover {
+    opacity: 1;
+}
+
+.wbqs-bind-popup {
+    text-align: left;
+}
+
+.wbqs-bind-popup ul {
+    margin: 6px 0;
+    padding-left: 20px;
+}
+
+.wbqs-bind-note {
+    opacity: 0.7;
+    font-size: 0.9em;
+}
+
+.wbqs-spacer {
+    flex: 1 1 auto;
+}
+
+.wbqs-disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+/* List */
+
+.wbqs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-height: 45vh;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.wbqs-standalone .wbqs-list {
+    max-height: 55vh;
+}
+
+.wbqs-empty {
+    padding: 12px;
+    text-align: center;
+    opacity: 0.6;
+    font-size: 0.9em;
+}
+
+.wbqs-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border: 1px solid var(--wbqs-border);
+    border-left: 4px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+.wbqs-item:hover {
+    background-color: var(--white20a, rgba(255, 255, 255, 0.1));
+}
+
+.wbqs-item.wbqs-on {
+    border-left-color: var(--wbqs-on);
+    background-color: color-mix(in srgb, var(--wbqs-on) 12%, transparent);
+}
+
+.wbqs-item.wbqs-off .wbqs-info {
+    opacity: 0.55;
+}
+
+/* Ticked for a bulk action — has to stay readable next to the on/off state. */
+.wbqs-item.wbqs-picked {
+    border-color: var(--wbqs-on);
+    border-style: dashed;
+    border-left-style: solid;
+}
+
+.wbqs-item.wbqs-picked .wbqs-info {
+    opacity: 1;
+}
+
+/* Only exists while multi-select mode is on, so it can never look like it
+   disagrees with the on/off switch. Font Awesome, not a real checkbox — themes
+   restyle those and the tick can end up invisible. */
+.wbqs-tick {
+    flex: 0 0 auto;
+    width: 15px;
+    font-size: 0.95em;
+    text-align: center;
+    opacity: 0.5;
+}
+
+.wbqs-item.wbqs-picked .wbqs-tick {
+    color: var(--wbqs-on);
+    opacity: 1;
+}
+
+.wbqs-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.wbqs-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wbqs-item.wbqs-on .wbqs-name {
+    font-weight: bold;
+}
+
+.wbqs-sub {
+    font-size: 0.75em;
+    opacity: 0.6;
+}
+
+.wbqs-state {
+    flex: 0 0 auto;
+    font-size: 0.72em;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    opacity: 0.5;
+}
+
+.wbqs-item.wbqs-on .wbqs-state {
+    color: var(--wbqs-on);
+    opacity: 1;
+}
+
+/* Toggle */
+
+.wbqs-toggle {
+    flex: 0 0 auto;
+    position: relative;
+    width: 34px;
+    height: 18px;
+    border-radius: 9px;
+    background-color: var(--white20a, rgba(255, 255, 255, 0.2));
+    border: 1px solid var(--wbqs-border);
+    transition: background-color 0.15s;
+}
+
+.wbqs-item.wbqs-on .wbqs-toggle {
+    background-color: var(--wbqs-on);
+    border-color: var(--wbqs-on);
+}
+
+.wbqs-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: var(--SmartThemeBodyColor, #fff);
+    transition: left 0.15s;
+}
+
+.wbqs-item.wbqs-on .wbqs-knob {
+    left: 18px;
+    background-color: var(--SmartThemeBlurTintColor, #111);
+}
+
+/* The only way into the editor now that the native picker is gone, so it can
+   not be as faint as a secondary action. */
+.wbqs-open {
+    flex: 0 0 auto;
+    padding: 2px 4px;
+    opacity: 0.65;
+    cursor: pointer;
+}
+
+.wbqs-open:hover {
+    opacity: 1;
+}
+
+/* Presets */
+
+.wbqs-presets {
+    padding-top: 6px;
+    border-top: 1px solid var(--wbqs-border);
+}
+
+.wbqs-presets-label {
+    font-size: 0.85em;
+    opacity: 0.7;
+}
+
+.wbqs-presets .wbqs-preset-select {
+    flex: 1 1 120px;
+    min-width: 90px;
+    margin: 0;
+}
+
+.wbqs-presets .menu_button {
+    margin: 0;
+    font-size: 0.8em;
+    white-space: nowrap;
+}
+
+/* Narrow screens */
+
+@media screen and (max-width: 550px) {
+    /* Keep the labels — icon-only buttons are guesswork on a phone. Shrink
+       them instead and let the rows wrap. */
+    .wbqs-bulk .menu_button,
+    .wbqs-presets .menu_button {
+        padding: 3px 6px;
+        font-size: 0.72em;
+    }
+
+    .wbqs-spacer {
+        display: none;
+    }
+
+    .wbqs-presets .wbqs-preset-select {
+        flex-basis: 100%;
+    }
+}
