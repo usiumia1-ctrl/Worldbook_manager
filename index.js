@@ -8,12 +8,12 @@
 
 import { eventSource, event_types, saveSettingsDebounced } from '../../../../script.js';
 import { extension_settings, getContext } from '../../../extensions.js';
-import { world_names, selected_world_info, loadWorldInfo } from '../../../world-info.js';
+import { world_names, selected_world_info, loadWorldInfo, deleteWorldInfo } from '../../../world-info.js';
 import { Popup, POPUP_TYPE, POPUP_RESULT } from '../../../popup.js';
 import { getCurrentLocale } from '../../../i18n.js';
 import { SlashCommandParser } from '../../../slash-commands/SlashCommandParser.js';
 import { SlashCommand } from '../../../slash-commands/SlashCommand.js';
-import { ARGUMENT_TYPE, SlashCommandArgument } from '../../../slash-commands/SlashCommandArgument.js';
+import { ARGUMENT_TYPE, SlashCommandArgument, SlashCommandNamedArgument } from '../../../slash-commands/SlashCommandArgument.js';
 import { SlashCommandEnumValue, enumTypes } from '../../../slash-commands/SlashCommandEnumValue.js';
 
 const MODULE_NAME = 'worldbookQuickSwitch';
@@ -474,6 +474,10 @@ class WorldBookPanel {
                 <div class="menu_button menu_button_icon wbqs-bulk-btn wbqs-needs-selection" data-action="sel-clear">
                     <i class="fa-solid fa-eraser"></i><span>${L('清除勾选', 'Clear checks')}</span>
                 </div>
+                <div class="wbqs-spacer"></div>
+                <div class="menu_button menu_button_icon wbqs-bulk-btn wbqs-needs-selection wbqs-danger" data-action="sel-delete" title="${L('把勾选的世界书从酒馆里彻底删除', 'Permanently delete the ticked world books')}">
+                    <i class="fa-solid fa-trash-can"></i><span>${L('删除选中', 'Delete checked')}</span>
+                </div>
             </div>
             <div class="wbqs-list"></div>
             <div class="wbqs-binding" style="display:none"></div>
@@ -483,11 +487,11 @@ class WorldBookPanel {
                 <div class="menu_button menu_button_icon wbqs-preset-btn" data-action="apply" title="${L('用该方案覆盖当前启用状态', 'Replace the current activation with this preset')}">
                     <i class="fa-solid fa-play"></i><span>${L('应用', 'Apply')}</span>
                 </div>
-                <div class="menu_button menu_button_icon wbqs-preset-btn" data-action="append" title="${L('在当前基础上追加启用', 'Enable the preset books on top of the current ones')}">
-                    <i class="fa-solid fa-plus"></i><span>${L('追加', 'Add')}</span>
+                <div class="menu_button menu_button_icon wbqs-preset-btn" data-action="create" title="${L('把当前启用的世界书存成一个新方案', 'Save the currently enabled books as a new preset')}">
+                    <i class="fa-solid fa-plus"></i><span>${L('新建', 'New')}</span>
                 </div>
-                <div class="menu_button menu_button_icon wbqs-preset-btn" data-action="save" title="${L('把当前启用的世界书保存为方案', 'Save the currently enabled books as a preset')}">
-                    <i class="fa-solid fa-floppy-disk"></i><span>${L('保存当前', 'Save')}</span>
+                <div class="menu_button menu_button_icon wbqs-preset-btn" data-action="save" title="${L('用当前启用状态覆盖所选方案', 'Overwrite the selected preset with the current activation')}">
+                    <i class="fa-solid fa-floppy-disk"></i><span>${L('保存', 'Save')}</span>
                 </div>
                 <div class="menu_button menu_button_icon wbqs-preset-btn" data-action="bind" title="${L('把方案绑定到当前角色卡或当前聊天', 'Bind this preset to the current character or chat')}">
                     <i class="fa-solid fa-link"></i><span>${L('绑定', 'Bind')}</span>
@@ -558,13 +562,16 @@ class WorldBookPanel {
             options.style.display = options.style.display === 'none' ? '' : 'none';
         });
 
-        $root.on('click', '.wbqs-collapse-btn', event => {
+        // The whole title bar folds the panel - it is the biggest target in the
+        // header, and the gear is the only thing in there that does its own job.
+        $root.on('click', '.wbqs-header', event => {
+            if (this.standalone || /** @type {HTMLElement} */ (event.target).closest('.wbqs-options-btn')) {
+                return;
+            }
+
             settings.collapsed = !settings.collapsed;
             saveSettingsDebounced();
-            $(event.currentTarget)
-                .toggleClass('fa-chevron-up', !settings.collapsed)
-                .toggleClass('fa-chevron-down', settings.collapsed);
-            $(this.bodyEl).toggle(!settings.collapsed);
+            this.applyCollapsed();
         });
 
         $root.on('click', '.wbqs-bulk-btn', event => {
@@ -595,6 +602,9 @@ class WorldBookPanel {
                 case 'sel-clear':
                     selection.clear();
                     renderAll();
+                    break;
+                case 'sel-delete':
+                    this.deleteCheckedWorlds(checked);
                     break;
             }
         });
@@ -658,14 +668,14 @@ class WorldBookPanel {
                 applyActiveWorlds(preset.worlds);
                 toastr.success(L(`已应用方案：${preset.name}`, `Applied preset: ${preset.name}`));
                 break;
-            case 'append':
-                if (!preset) {
-                    return toastr.info(L('请先选择一个方案。', 'Pick a preset first.'));
-                }
-                setManyWorldStates(preset.worlds, true);
+            case 'create':
+                this.createPreset();
                 break;
             case 'save':
-                this.savePreset(preset?.name ?? '');
+                if (!preset) {
+                    return toastr.info(L('请先在左边选择要覆盖的方案，或点「新建」。', 'Pick the preset to overwrite first, or hit New.'));
+                }
+                this.overwritePreset(preset);
                 break;
             case 'bind':
                 if (!preset) {
@@ -754,14 +764,70 @@ class WorldBookPanel {
         }
     }
 
-    async savePreset(suggestedName) {
+    /**
+     * Deletes the ticked world books from SillyTavern for good. This throws
+     * files away, so it asks first and spells out exactly what goes.
+     * @param {string[]} names World book names
+     */
+    async deleteCheckedWorlds(names) {
+        const targets = names.filter(name => getAllWorlds().includes(name));
+
+        if (!targets.length) {
+            return;
+        }
+
+        const shown = targets.slice(0, 12);
+        const rest = targets.length - shown.length;
+        const content = document.createElement('div');
+        content.classList.add('wbqs-bind-popup');
+        content.innerHTML = `
+            <h3>${L('删除世界书', 'Delete world books')}</h3>
+            <p>${L(`确定要<b>彻底删除</b>这 ${targets.length} 本世界书吗？`, `Permanently delete these ${targets.length} world books?`)}</p>
+            <ul>${shown.map(name => `<li>${escapeHtml(name)}</li>`).join('')}</ul>
+            ${rest > 0 ? `<p class="wbqs-bind-note">${L(`……以及另外 ${rest} 本。`, `…and ${rest} more.`)}</p>` : ''}
+            <p class="wbqs-bind-note wbqs-warning">${L('文件会从酒馆里删掉，无法撤销。', 'The files are removed from SillyTavern. This cannot be undone.')}</p>`;
+
+        const confirmed = await new Popup(content, POPUP_TYPE.CONFIRM, '', {
+            okButton: L(`删除 ${targets.length} 本`, `Delete ${targets.length}`),
+            cancelButton: L('取消', 'Cancel'),
+        }).show();
+
+        if (confirmed !== POPUP_RESULT.AFFIRMATIVE) {
+            return;
+        }
+
+        let deleted = 0;
+        const failed = [];
+
+        for (const name of targets) {
+            try {
+                await deleteWorldInfo(name) ? deleted++ : failed.push(name);
+            } catch (error) {
+                console.error(LOG_PREFIX, 'Failed to delete', name, error);
+                failed.push(name);
+            }
+            selection.delete(name);
+        }
+
+        renderAll();
+
+        if (deleted) {
+            toastr.success(L(`已删除 ${deleted} 本世界书。`, `Deleted ${deleted} world books.`));
+        }
+        if (failed.length) {
+            toastr.error(L(`有 ${failed.length} 本没能删除：${failed.join('、')}`, `Could not delete ${failed.length}: ${failed.join(', ')}`));
+        }
+    }
+
+    /** Stores the current activation under a brand new name. */
+    async createPreset() {
         const settings = getSettings();
         const active = getActiveWorlds();
-        const name = await Popup.show.input(
-            L('保存方案', 'Save preset'),
-            L(`将当前启用的 ${active.length} 本世界书保存为方案：`, `Save the ${active.length} currently enabled books as a preset:`),
-            suggestedName,
-        );
+        const name = (await Popup.show.input(
+            L('新建方案', 'New preset'),
+            L(`把当前启用的 ${active.length} 本世界书存成新方案，取个名字：`, `Save the ${active.length} currently enabled books as a new preset. Name it:`),
+            '',
+        ))?.trim();
 
         if (!name) {
             return;
@@ -769,6 +835,15 @@ class WorldBookPanel {
 
         const existing = settings.presets.find(x => x.name === name);
         if (existing) {
+            const confirmed = await Popup.show.confirm(
+                L('同名方案已存在', 'That name is taken'),
+                L(`已经有一个叫「${name}」的方案（${existing.worlds.length} 本），要覆盖它吗？`, `A preset called "${name}" already exists (${existing.worlds.length} books). Overwrite it?`),
+            );
+
+            if (confirmed !== POPUP_RESULT.AFFIRMATIVE) {
+                return;
+            }
+
             existing.worlds = active;
         } else {
             settings.presets.push({ name, worlds: active });
@@ -777,7 +852,19 @@ class WorldBookPanel {
         saveSettingsDebounced();
         renderAll();
         $(this.presetSelectEl).val(name);
-        toastr.success(L(`方案已保存：${name}`, `Preset saved: ${name}`));
+        toastr.success(L(`已新建方案：${name}（${active.length} 本）`, `Preset created: ${name} (${active.length} books)`));
+    }
+
+    /**
+     * Overwrites an existing preset with whatever is enabled right now.
+     * @param {{name: string, worlds: string[]}} preset
+     */
+    overwritePreset(preset) {
+        const active = getActiveWorlds();
+        preset.worlds = active;
+        saveSettingsDebounced();
+        renderAll();
+        toastr.success(L(`已更新方案「${preset.name}」：${active.length} 本世界书`, `Updated preset "${preset.name}": ${active.length} books`));
     }
 
     async deletePreset(preset) {
@@ -814,6 +901,7 @@ class WorldBookPanel {
             $(this.searchEl).val(this.search);
         }
 
+        this.applyCollapsed();
         this.renderStat();
         this.renderBinding();
         this.renderPresets();
@@ -855,6 +943,20 @@ class WorldBookPanel {
         element.innerHTML = html;
         this.lastHtml[key] = html;
         return true;
+    }
+
+    /** Syncs the folded state onto the DOM (chevron, body, header affordance). */
+    applyCollapsed() {
+        if (this.standalone) {
+            return;
+        }
+
+        const collapsed = getSettings().collapsed;
+        $(this.root).find('.wbqs-collapse-btn')
+            .toggleClass('fa-chevron-up', !collapsed)
+            .toggleClass('fa-chevron-down', collapsed);
+        $(this.bodyEl).toggle(!collapsed);
+        this.root.classList.toggle('wbqs-collapsed', collapsed);
     }
 
     renderStat() {
@@ -1068,9 +1170,18 @@ function registerSlashCommands() {
     SlashCommandParser.addCommandObject(SlashCommand.fromProps({
         name: 'wb-preset',
         helpString: L(
-            '应用一个「世界书快捷开关」方案，覆盖当前启用的全局世界书。',
-            'Applies a World Book Quick Switch preset, replacing the currently enabled global world books.',
+            '应用一个「世界书快捷开关」方案。默认覆盖当前启用的全局世界书，<code>mode=append</code> 则是在现有基础上追加。',
+            'Applies a World Book Quick Switch preset. Replaces the enabled global world books by default; <code>mode=append</code> adds them on top instead.',
         ),
+        namedArgumentList: [
+            SlashCommandNamedArgument.fromProps({
+                name: 'mode',
+                description: L('replace＝覆盖（默认），append＝追加', 'replace (default) or append'),
+                typeList: [ARGUMENT_TYPE.STRING],
+                defaultValue: 'replace',
+                enumList: ['replace', 'append'],
+            }),
+        ],
         unnamedArgumentList: [
             SlashCommandArgument.fromProps({
                 description: L('方案名称', 'Preset name'),
@@ -1083,7 +1194,7 @@ function registerSlashCommands() {
                 )),
             }),
         ],
-        callback: (_args, value) => {
+        callback: (args, value) => {
             const name = String(value).trim();
             const preset = getSettings().presets.find(x => x.name === name);
 
@@ -1092,8 +1203,13 @@ function registerSlashCommands() {
                 return '';
             }
 
-            applyActiveWorlds(preset.worlds);
-            return preset.worlds.join(',');
+            if (String(args.mode).toLowerCase() === 'append') {
+                setManyWorldStates(preset.worlds, true);
+            } else {
+                applyActiveWorlds(preset.worlds);
+            }
+
+            return getActiveWorlds().join(',');
         },
     }));
 

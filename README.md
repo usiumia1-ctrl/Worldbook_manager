@@ -18,13 +18,14 @@
 - **状态一目了然** — 已启用的书有高亮底色、左侧色条、`已启用` 标签和实心开关；
   标题栏常驻 `已启用 / 总数` 计数。
 - **点一下就切** — 点整行任意位置开 / 关，不用再进下拉框。
-- **多选批量** — 点「多选」进入多选模式，勾选若干本后「开启选中 / 关闭选中」；
-  `Shift` 点击可一次勾一整段。
+- **多选批量** — 点「多选」进入多选模式，勾选若干本后「开启选中 / 关闭选中」，
+  也能**批量删除**世界书；`Shift` 点击可一次勾一整段。
 - **全部开 / 全部关 / 反转** — 「全部开 / 全部关」只作用于当前列表，配合搜索就是
   「把所有带『战斗』的世界书一键打开」。
 - **搜索 / 排序 / 只看已启用** — 上百本也能秒定位。
 - **条目数量** — 可选显示每本的条目数，以及其中被禁用的条数。
-- **方案** — 把当前启用的一整套存成方案，之后一键「应用」（覆盖）或「追加」。
+- **方案** — 把当前启用的一整套存成方案，之后一键「应用」；「新建」存新方案，
+  「保存」覆盖所选方案。
 - **方案绑定角色卡 / 聊天** — 绑定之后，切到那张卡或那个聊天时自动套用对应方案。
 - **一键跳转编辑** — 行尾铅笔直接在下方编辑器里打开这本世界书。
 - **随处可开** — 魔杖菜单里也有入口，不打开世界书抽屉也能弹出同一块面板。
@@ -48,12 +49,14 @@ https://github.com/usiumia1-ctrl/Worldbook_manager
 
 | 操作 | 说明 |
 | --- | --- |
+| 点击标题栏 | 折叠 / 展开整块面板（点齿轮不会折叠） |
 | 点击某一行 | 开 / 关这本世界书 |
 | 行尾铅笔 | 在下方编辑器里打开这本世界书 |
 | 搜索框 / 排序 / 只看已启用 | 筛选与排序当前列表 |
 | 全部开 / 全部关 | 对**当前列表里显示的**世界书批量操作（受搜索、筛选影响） |
 | 反转 | 所有世界书开关状态取反（不受筛选影响） |
 | 多选 | 进入 / 退出多选模式 |
+| 删除选中（红色，多选模式下） | 把勾选的世界书从酒馆里**彻底删除**，删前会列出书名确认 |
 | 齿轮 | 条目数量、开关文字、魔杖菜单按钮、自动应用绑定方案 |
 | ∧ / ∨ | 折叠 / 展开整块面板 |
 
@@ -67,12 +70,19 @@ https://github.com/usiumia1-ctrl/Worldbook_manager
 
 平时列表里不会有多余的勾选框，不会跟右边的开关搞混。
 
+右边红色的「**删除选中**」会把勾选的世界书**从酒馆里彻底删掉**（不是关闭，是删文件）。
+点下去会先弹出确认框，把要删的书名一本本列给你看，确认之后无法撤销：
+
+![删除确认](docs/delete-confirm.png)
+
 ### 方案
 
-底部「保存当前」把此刻启用的一整套世界书存成方案。之后：
+- **新建** — 把此刻启用的一整套世界书存成一个新方案（取个名字）
+- **应用** — 用所选方案覆盖当前启用状态（原来开着、方案里没有的会被关掉）
+- **保存** — 用当前的开关状态覆盖**下拉框里选中的那个**方案
+- **删除**（垃圾桶）— 删掉所选方案本身，不影响世界书
 
-- **应用** — 用方案覆盖当前启用状态（原来开着、方案里没有的会被关掉）
-- **追加** — 在当前基础上把方案里的书补上，不关任何东西
+想「只补不关」的话用斜杠命令：`/wb-preset mode=append 方案名`。
 
 ### 方案绑定角色卡 / 聊天
 
@@ -97,6 +107,7 @@ https://github.com/usiumia1-ctrl/Worldbook_manager
 | 命令 | 作用 |
 | --- | --- |
 | `/wb-preset 方案名` | 应用某个方案（覆盖当前启用的全局世界书） |
+| `/wb-preset mode=append 方案名` | 改成追加：把方案里的书补上，不关掉已开的 |
 | `/wb-active` | 返回当前已启用的全局世界书名称，逗号分隔 |
 | `/wb-bound` | 返回绑定到当前角色卡 / 聊天的方案名（没有则为空） |
 
@@ -123,6 +134,10 @@ https://github.com/usiumia1-ctrl/Worldbook_manager
 **全局**世界书（对所有聊天生效的那一套）。酒馆自己的「角色卡内嵌世界书」「聊天世界书」
 不在这里，仍由酒馆原生界面管理。本插件的「方案绑定」是另一回事：它切换的是**全局**那一套。
 
+**「新建」和「保存」有什么区别？**
+「新建」会让你取个名字，存成一个新方案；「保存」是把当前的开关状态覆盖写进**下拉框里选中的那个**方案。
+没选方案就点「保存」，它会提示你先选一个。
+
 **每行右边的「已启用 / 已关闭」文字能去掉吗？**
 可以，齿轮里取消「显示开关文字」，只留右边的开关。
 
@@ -142,9 +157,10 @@ readable panel: one row per world book, with a switch, a state label and an
 
 Click a row to toggle it. Hit **Select** for multi-select mode (shift-click for
 ranges) and flip many books at once. Search, sort and "only active" keep long
-lists manageable. Save the current set of books as a **preset**, then apply or
-append it in one click — or **bind** a preset to a character card or to a single
-chat so it is applied automatically when you switch to it. Slash commands
+lists manageable, and checked books can also be deleted in bulk. Save the current
+set of books as a **preset**, then apply it in one click — or **bind** a preset to
+a character card or to a single chat so it is applied automatically when you
+switch to it. Slash commands
 (`/wb-preset`, `/wb-active`, `/wb-bound`) make it scriptable from Quick Replies.
 
 Install via **Extensions → Install extension** with this repository URL. The UI

@@ -36,6 +36,22 @@
     gap: 8px;
 }
 
+/* The whole bar folds the panel, so it has to look like it does. */
+.wbqs-panel:not(.wbqs-standalone) .wbqs-header {
+    padding: 2px 4px;
+    margin: -2px -4px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.wbqs-panel:not(.wbqs-standalone) .wbqs-header:hover {
+    background-color: var(--white20a, rgba(255, 255, 255, 0.08));
+}
+
+.wbqs-panel.wbqs-collapsed {
+    gap: 0;
+}
+
 .wbqs-title {
     display: flex;
     align-items: center;
@@ -196,6 +212,21 @@
 
 .wbqs-spacer {
     flex: 1 1 auto;
+}
+
+/* Deletes files - it should never be mistaken for the on/off buttons. */
+.wbqs-danger {
+    color: var(--fullred, #d95c5c) !important;
+    border-color: color-mix(in srgb, var(--fullred, #d95c5c) 50%, transparent) !important;
+}
+
+.wbqs-danger:hover {
+    background-color: color-mix(in srgb, var(--fullred, #d95c5c) 25%, transparent) !important;
+}
+
+.wbqs-warning {
+    color: var(--fullred, #d95c5c);
+    opacity: 1 !important;
 }
 
 .wbqs-disabled {
